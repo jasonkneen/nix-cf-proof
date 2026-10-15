@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 token=$(cat receipts/proof-token)
-worker="${WORKER_URL:-https://nix-cf-proof.coy.workers.dev}"
+worker="${WORKER_URL:?set WORKER_URL}"
 
 curl -fsS -H "authorization: Bearer $token" "$worker/build/status" \
   | node -e 'let t="";process.stdin.on("data",d=>t+=d).on("end",()=>{const r=JSON.parse(t).receipt;if(!r)process.exit(1);process.stdout.write(r)})' \
@@ -30,4 +30,4 @@ const next = text.replace(/"image": "registry\.cloudflare\.com\/[^"\/]+\/nix-cf-
 if (next === text && !text.includes(process.env.IMAGE)) throw new Error("no sandbox image entry in wrangler.jsonc");
 fs.writeFileSync(path, next);
 '
-GUARDRAIL_WORKERS_SUBDOMAIN=coy npx wrangler deploy 2>&1 | grep -E "ready to run|Current Version|ERROR"
+npx wrangler deploy 2>&1 | grep -E "ready to run|Current Version|ERROR"

@@ -20,7 +20,7 @@ async function download(url, path) {
 }
 (async () => {
   await download(process.env.NIX_STATIC_URL, "/work/nix-static");
-  await download(`https://codeload.github.com/acoyfellow/nix-cf-proof/tar.gz/${process.env.SOURCE_SHA}`, "/work/src.tar.gz");
+  await download(`https://codeload.github.com/jasonkneen/nix-cf-proof/tar.gz/${process.env.SOURCE_SHA}`, "/work/src.tar.gz");
 })().catch((error) => { console.error(error); process.exit(1); });
 '
 chmod +x /work/nix-static

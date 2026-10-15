@@ -24,6 +24,9 @@ const decoder = new TextDecoder();
 
 const KEEPALIVE_INTERVAL_MS = 60 * 1000;
 
+// Cost cap: the builder container is destroyed after 45 minutes no matter what.
+const MAX_BUILD_MS = 45 * 60 * 1000;
+
 export class BuilderComputer extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -35,6 +38,11 @@ export class BuilderComputer extends DurableObject<Env> {
 
   async alarm(): Promise<void> {
     if (this.ctx.container?.running) {
+      const startedAt = (await this.ctx.storage.get<number>('startedAt')) ?? 0;
+      if (Date.now() - startedAt > MAX_BUILD_MS) {
+        await this.ctx.container.destroy('build exceeded cost cap');
+        return;
+      }
       const tail = await this.read(['tail', '-c', '6000', '/work-build.log']).catch(() => '');
       const memory = await this.read(['cat', '/sys/fs/cgroup/memory.peak']).catch(() => '');
       await this.ctx.storage.put('lastLog', tail);
@@ -54,6 +62,7 @@ export class BuilderComputer extends DurableObject<Env> {
       });
     }
     await container.setInactivityTimeout(BUILD_INACTIVITY_TIMEOUT_MS);
+    await this.ctx.storage.put('startedAt', Date.now());
     await this.ctx.storage.delete(['exit', 'lastLog', 'memoryPeak']);
     this.recordExit();
     await this.ctx.storage.setAlarm(Date.now() + KEEPALIVE_INTERVAL_MS);
@@ -122,7 +131,7 @@ export class BuilderComputer extends DurableObject<Env> {
   }
 
   private async fetchSource(sourceSha: string): Promise<string> {
-    const url = `https://raw.githubusercontent.com/acoyfellow/nix-cf-proof/${sourceSha}/scripts/bootstrap-builder.sh`;
+    const url = `https://raw.githubusercontent.com/jasonkneen/nix-cf-proof/${sourceSha}/scripts/bootstrap-builder.sh`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`bootstrap fetch ${response.status}`);

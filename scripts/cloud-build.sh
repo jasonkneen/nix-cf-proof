@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-WORKER_URL="${WORKER_URL:-https://nix-cf-proof.coy.workers.dev}"
+WORKER_URL="${WORKER_URL:?set WORKER_URL}"
 token=$(cat receipts/proof-token)
 sha=$(git rev-parse HEAD)
 git fetch -q origin main
